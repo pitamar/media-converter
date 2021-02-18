@@ -16,6 +16,8 @@ if __name__ == '__main__':
     parser.add_argument('--output-filetype', type=str, help='Ouptut file extensions.')
     parser.add_argument('--processes', '-p', type=int, help='Number of processes for parallel execution.', default=1)
     parser.add_argument('--ffmpeg-args', '-a', type=str, help='FFMPEG arguments', default='')
+    parser.add_argument('--verbose', help='Verbose output', action='store_true')
+    parser.add_argument('--dry-run', help='Print the commands to be executed', action='store_true')
     args = parser.parse_args()
 
 
@@ -25,6 +27,8 @@ if __name__ == '__main__':
     output_directory = os.path.realpath(args.output_dir)
     num_processes = args.processes
     ffmpeg_args = args.ffmpeg_args
+    dry_run = args.dry_run
+    verbose = args.verbose
 
     input_pattern = os.path.join(input_directory, '**', f'*.{input_filetype}')
     input_files = glob(input_pattern, recursive=True)
@@ -35,11 +39,15 @@ if __name__ == '__main__':
         output_file_path = os.path.join(output_directory, input_rel_path)
         output_file_path = re.sub(rf'.{input_filetype}$', f'.{output_filetype}', output_file_path)
         output_file_dirname = os.path.dirname(output_file_path)
-
-        command = f'ffmpeg -hide_banner -loglevel panic {ffmpeg_args} -i "{input_file_path}" "{output_file_path}"'
-
-        os.makedirs(output_file_dirname, exist_ok=True)
-        os.system(command)
+        
+        verbosity_flags = '' if verbose else '-hide_banner -loglevel panic'
+        command = f'ffmpeg {verbosity_flags} -i "{input_file_path}" {ffmpeg_args} "{output_file_path}"'
+        
+        if dry_run:
+            print(command)
+        else:
+            os.makedirs(output_file_dirname, exist_ok=True)
+            os.system(command)
 
 
     with Pool(processes=num_processes) as pool:
